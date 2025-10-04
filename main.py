@@ -1,7 +1,7 @@
 from keep_alive import keep_alive
 import discord
 from discord.ext import commands
-import os
+import asyncio
 
 keep_alive()  # inicia el mini servidor Flask
 
@@ -11,4 +11,13 @@ bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 async def on_ready():
     print(f"✅ Bot conectado como {bot.user}")
 
-bot.run(os.getenv("DISCORD_TOKEN") 
+# 🔹 Cargar el archivo presupuesto.py
+async def load_commands():
+    await bot.load_extension("presupuesto")
+
+async def main():
+    async with bot:
+        await load_commands()
+        await bot.start("TU_TOKEN_AQUI")  # cambia por tu token
+
+asyncio.run(main())
