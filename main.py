@@ -18,6 +18,6 @@ async def load_commands():
 async def main():
     async with bot:
         await load_commands()
-        await bot.start("TU_TOKEN_AQUI")  # cambia por tu token
+        await bot.start(os.getenv("DISCORD_TOKEN")) # cambia por tu token
 
 asyncio.run(main())
