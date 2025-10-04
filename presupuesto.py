@@ -10,9 +10,15 @@ class Presupuesto(commands.Cog):
     @app_commands.command(name="presupuesto", description="Calcula el presupuesto de tus insumos con porcentajes fijos")
     async def presupuesto(self, interaction: discord.Interaction):
         view = PresupuestoView(self)
-        await interaction.response.send_message("🧾 **Panel de Presupuesto**\nAgrega tus insumos uno por uno:", view=view, ephemeral=True)
+        await interaction.response.send_message(
+            "🧾 **Panel de Presupuesto**\nAgrega tus insumos uno por uno usando el botón de abajo.",
+            view=view,
+            ephemeral=True
+        )
 
-
+# ╔══════════════════════════════════════╗
+# ║           VISTA PRINCIPAL            ║
+# ╚══════════════════════════════════════╝
 class PresupuestoView(discord.ui.View):
     def __init__(self, cog):
         super().__init__(timeout=None)
@@ -29,48 +35,65 @@ class PresupuestoView(discord.ui.View):
     async def calcular_totales(self, interaction: discord.Interaction, button: discord.ui.Button):
         user_id = interaction.user.id
         insumos = self.cog.presupuestos.get(user_id, [])
+
         if not insumos:
             await interaction.response.send_message("⚠️ No agregaste ningún insumo.", ephemeral=True)
             return
 
+        # Calcular totales
         total_insumos = sum(precio for _, precio in insumos)
         utensilios = total_insumos * 0.30
         mano_obra = total_insumos * 0.40
         otros = total_insumos * 0.30
         total_final = total_insumos + utensilios + mano_obra + otros
 
-        desc_insumos = "\n".join([f"• {nombre}: {precio:.2f}" for nombre, precio in insumos])
+        # Mostrar insumos agregados
+        desc_insumos = "\n".join([f"• {nombre}: S/ {precio:.2f}" for nombre, precio in insumos])
 
         embed = discord.Embed(title="📊 Cálculo de Presupuesto", color=discord.Color.green())
-        embed.add_field(name="🧾 Insumos", value=desc_insumos or "Ninguno", inline=False)
-        embed.add_field(name="💵 Costos directos", value=f"{total_insumos:.2f}", inline=False)
-        embed.add_field(name="🍴 Utensilios (30 %)", value=f"{utensilios:.2f}", inline=True)
-        embed.add_field(name="👷 Mano de obra (40 %)", value=f"{mano_obra:.2f}", inline=True)
-        embed.add_field(name="📦 Otros (30 %)", value=f"{otros:.2f}", inline=True)
-        embed.add_field(name="💰 Total final", value=f"**{total_final:.2f}**", inline=False)
+        embed.add_field(name="🧾 Insumos agregados", value=desc_insumos or "Ninguno", inline=False)
+        embed.add_field(name="💵 Costos directos", value=f"S/ {total_insumos:.2f}", inline=False)
+        embed.add_field(name="🍴 Utensilios (30 %)", value=f"S/ {utensilios:.2f}", inline=True)
+        embed.add_field(name="👷 Mano de obra (40 %)", value=f"S/ {mano_obra:.2f}", inline=True)
+        embed.add_field(name="📦 Otros (30 %)", value=f"S/ {otros:.2f}", inline=True)
+        embed.add_field(name="💰 Total final", value=f"**S/ {total_final:.2f}**", inline=False)
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
         self.cog.presupuestos.pop(user_id, None)  # Limpia los insumos del usuario
 
-
+# ╔══════════════════════════════════════╗
+# ║           FORMULARIO MODAL           ║
+# ╚══════════════════════════════════════╝
 class InsumoModal(discord.ui.Modal, title="Agregar insumo"):
     def __init__(self, cog, view):
         super().__init__()
         self.cog = cog
         self.view = view
 
-        self.nombre = discord.ui.TextInput(label="Nombre del insumo", placeholder="Ejemplo: Azúcar", max_length=50)
-        self.precio = discord.ui.TextInput(label="Costo (S/)", placeholder="Ejemplo: 5.50", max_length=10)
+        self.nombre = discord.ui.TextInput(
+            label="Nombre y costo",
+            placeholder="Ejemplo: Azúcar S/5.50",
+            max_length=100
+        )
 
         self.add_item(self.nombre)
-        self.add_item(self.precio)
 
     async def on_submit(self, interaction: discord.Interaction):
+        texto = self.nombre.value.strip()
+        partes = texto.split("S/")
+
+        if len(partes) != 2:
+            await interaction.response.send_message(
+                "⚠️ Escribe el insumo así: `Azúcar S/5.50`",
+                ephemeral=True
+            )
+            return
+
+        nombre = partes[0].strip()
         try:
-            nombre = str(self.nombre.value)
-            precio = float(self.precio.value)
+            precio = float(partes[1].strip())
         except ValueError:
-            await interaction.response.send_message("⚠️ Ingresa un número válido en el costo.", ephemeral=True)
+            await interaction.response.send_message("⚠️ Ingresa un número válido después de 'S/'", ephemeral=True)
             return
 
         user_id = self.view.user_id
@@ -78,8 +101,7 @@ class InsumoModal(discord.ui.Modal, title="Agregar insumo"):
             self.cog.presupuestos[user_id] = []
         self.cog.presupuestos[user_id].append((nombre, precio))
 
-        await interaction.response.send_message(f"✅ Insumo agregado: **{nombre}** – S/ {precio:.2f}", ephemeral=True)
-
+        await interaction.response.send_message(f"✅ Agregado: **{nombre}** – S/ {precio:.2f}", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(Presupuesto(bot))
