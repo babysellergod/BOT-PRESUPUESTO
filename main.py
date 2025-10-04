@@ -2,6 +2,7 @@ from keep_alive import keep_alive
 import discord
 from discord.ext import commands
 import asyncio
+import os  # 👈 esta línea es fundamental
 
 keep_alive()  # inicia el mini servidor Flask
 
@@ -18,6 +19,6 @@ async def load_commands():
 async def main():
     async with bot:
         await load_commands()
-        await bot.start(os.getenv("DISCORD_TOKEN")) # cambia por tu token
+        await bot.start(os.getenv("DISCORD_TOKEN"))  # lee el token desde Render
 
 asyncio.run(main())
