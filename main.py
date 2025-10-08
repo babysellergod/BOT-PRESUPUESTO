@@ -19,6 +19,7 @@ async def on_ready():
 
 async def load_commands():
     await bot.load_extension("presupuesto")
+    await bot.load_extension("precio") 
 
 async def main():
     async with bot:
